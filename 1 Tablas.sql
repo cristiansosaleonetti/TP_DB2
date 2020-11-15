@@ -1,4 +1,14 @@
--- DROP DATABASE TP_BD2;
+/* 
+************************
+
+      PRIMERA PARTE
+
+	CREACIÓN DE TABLAS
+
+************************
+*/
+
+DROP DATABASE if exists TP_BD2;
 
 CREATE DATABASE TP_BD2;
 
@@ -53,7 +63,7 @@ CREATE TABLE horas_rendidas (
 		REFERENCES proyecto(id_proy),
 		CONSTRAINT fk_id_legajo_HR FOREIGN KEY (ID_legajo)
 		REFERENCES legajo(id_legajo),
-		CONSTRAINT PK_Horas_rendidas UNIQUE(id_proy, id_legajo,Hs_dia_rendido)
+		CONSTRAINT PK_Horas_rendidas UNIQUE(id_proy,id_legajo,Hs_dia_rendido)
 	);
 
 
@@ -71,9 +81,10 @@ CREATE TABLE Asignacion_rol (
 	);
 	
 CREATE TABLE Liquidacion_mensual (
-	ID_Liquidacion INT not null auto_increment primary key,
+	ID_Liquidacion INT not null AUTO_INCREMENT PRIMARY KEY ,
 	ID_Cliente INT NOT NULL,
 	ID_Proy INT NOT NULL,
+	ID_Rol INT NOT NULL,
 	anio_liquidacion INT NOT NULL,
 	mes_liquidacion INT NOT NULL,
 	cant_horas DOUBLE,
@@ -81,9 +92,9 @@ CREATE TABLE Liquidacion_mensual (
 		cONSTRAINT fk_id_cliente_LM FOREIGN KEY (id_cliente)
 	   REFERENCES cliente(ID_cliente),
 		CONSTRAINT fk_id_proy_LM FOREIGN KEY (ID_proy)
-		REFERENCES proyecto(id_proy)
+		REFERENCES proyecto(id_proy),
+		coNSTRAINT fk_id_rol_LM FOREIGN KEY (ID_rol)
+		REFERENCES rol(id_rol)
 	);
 	
-	
-
 	

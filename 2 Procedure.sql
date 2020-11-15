@@ -1,5 +1,16 @@
--- DROP procedure RendicionDeHoras;
--- DROP procedure CalcularLiquidacionMensual;
+
+/* 
+************************
+
+      SEGUNDA PARTE
+
+	     PROCEDURES
+
+************************
+*/
+
+
+DROP procedure if exists RendicionDeHoras;
 
 delimiter $$
 create procedure RendicionDeHoras(IN opcion INT,in ID_proy_RDH int,in ID_Legajo_RDH INT,IN fec_RDH DATE,in hs_rendidas_RDH INT)
@@ -36,67 +47,80 @@ BEGIN
 END
 $$
 
+DROP procedure if EXISTS  CalcularLiquidacionMensual;
 delimiter $$
-create procedure CalcularLiquidacionMensual (IN ID_Cliente_CLM INT, in ID_Proy_CLM int,in Anio_CLM INT,IN mes_CLM INT)
+create procedure CalcularLiquidacionMensual (in ID_Proy_CLM int,in Anio_CLM INT,IN mes_CLM INT)
 BEGIN
-	DECLARE done INT DEFAULT 0;
-	DECLARE Hs_rendidas_CLM double;
-	DECLARE Hs_liquidadas_CLM double;
-	DECLARE acum_horas DOUBLE DEFAULT 0;
+	DECLARE cliente_aux_ID INT ; 
+	DECLARE rol_aux_ID INT ; 
 	DECLARE acum_horas_rend DOUBLE DEFAULT 0;
 	DECLARE acum_horas_liq DOUBLE DEFAULT 0;
-	DECLARE correlativo_liq INT DEFAULT 0;
 	DECLARE correlativo_prox INT DEFAULT -1; 
-	declare Hs_rend cursor for 
-			SELECT sum(hr.hs_rendidas) 
-			from Horas_Rendidas hr 
-			WHERE (hr.ID_Proy = ID_proy_CLM and year(hr.Hs_dia_rendido) = anio_CLM and MONTH(hr.Hs_dia_rendido) = mes_CLM)
-			;
-  	declare liquidaciones cursor for 
-			SELECT SUM(l.Cant_Horas),l.Correlativo
-			from liquidacion_mensual l
-			WHERE (l.ID_Proy = ID_proy_CLM AND l.anio_liquidacion = anio_CLM AND l.mes_liquidacion = mes_cLM)
-			GROUP BY l.correlativo
-			ORDER BY l.correlativo asc
-			;
-
+	DECLARE acum_horas DOUBLE DEFAULT 0;
+	DECLARE done INT DEFAULT 0;
+	declare Curs_rol cursor for 
+			SELECT r.id_rol
+			from rol r;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+  
+  
+/* Dertermino el cliente de este proyecto */ 
+		SET cliente_aux_ID =  (SELECT p.ID_Cliente
+										from proyecto p WHERE p.ID_Proy = ID_Proy_CLM);				
 
-/* Determino las horas rendidas para este proyecto */
-  open Hs_rend;
-  	 mi_ciclo: loop
-  	 	set done = false;
-	 	fetch Hs_rend into Hs_Rendidas_CLM;
-	 	if done then
-      	leave mi_ciclo;
- 	   end if;
-		set acum_Horas_rend = acum_Horas_rend +Hs_Rendidas_CLM;
-	 end loop mi_ciclo;
-  close Hs_Rend;
-  
-/* Determino las horas ya liquidadas para este proyecto
-   y también el último correlativo de liquidación       */
-  open liquidaciones;
-  	 mi_ciclo2: loop
-  	 	set done = false;
-	 	fetch liquidaciones into Hs_liquidadas_CLM,correlativo_liq;
-	 	if done then
-      	leave mi_ciclo2;
- 	   end if;
-		set acum_Horas_liq = acum_Horas_liq+Hs_liquidadas_CLM;
-		SET correlativo_prox = correlativo_liq;
-    end loop mi_ciclo2;
-  close liquidaciones; 
-  
-  /* Si la cantidad de horas rendidas menos las liquidadas 
-  		es distinto a cero                                    */
-  Set acum_horas = acum_Horas_rend - acum_Horas_liq;
-  If acum_Horas != 0 then
-  		SET correlativo_prox = correlativo_prox + 1;
-		INSERT INTO liquidacion_mensual (ID_Cliente    ,ID_Proy    ,anio_liquidacion,mes_liquidacion,Cant_Horas,Correlativo) 
-			VALUES                       (ID_Cliente_CLM,ID_proy_CLM,anio_CLM        ,mes_CLM        ,acum_Horas,correlativo_prox);
-  END if;
+		SET correlativo_prox =  (SELECT MAX(l.Correlativo)
+										from liquidacion_mensual l
+										WHERE (l.ID_Proy = ID_proy_CLM AND l.anio_liquidacion = anio_CLM AND l.mes_liquidacion = mes_cLM));
+		
+		if correlativo_prox IS NULL then 
+			SET correlativo_prox = -1;
+		  END if; 		  		
+	  	SET correlativo_prox = correlativo_prox + 1;	
+		
+		
+		open Curs_rol;
+  	 		ciclo_rol: loop
+  	 			set done = false;
+	 			fetch Curs_rol into rol_aux_ID;
+				SET acum_Horas_rend = 0;
+  	 			SET acum_Horas_liq = 0;
+					if done then
+      				leave ciclo_rol;
+ 	   			end if;
+ 	   			
+ 	   		
+				/* Determino las horas rendidas para este proyecto por este rol*/
+				set acum_Horas_rend = 	(SELECT sum(hr.hs_rendidas) 
+												from Horas_Rendidas hr INNER JOIN Asignacion_rol ar on ar.id_legajo = hr.id_legajo and  hr.ID_Proy = ar.ID_Proy
+												WHERE (hr.ID_Proy = ID_proy_CLM and year(hr.Hs_dia_rendido) = anio_CLM and MONTH(hr.Hs_dia_rendido) = mes_CLM AND ar.id_rol = rol_aux_ID));
+				
+		
+				
+				if acum_Horas_rend IS NULL then 
+					SET acum_Horas_rend = 0;
+		  		END if; 
+								
+				/* Determino las horas ya liquidadas para este proyecto
+ 				  y también el último correlativo de liquidación       */
+				set acum_Horas_liq = (SELECT SUM(l.Cant_Horas)
+											from liquidacion_mensual l 
+											WHERE (l.ID_Proy = ID_proy_CLM AND l.anio_liquidacion = anio_CLM AND l.mes_liquidacion = mes_cLM AND l.ID_Rol = rol_aux_ID));
+		
+				if acum_Horas_liq IS NULL then 
+					SET acum_Horas_liq = 0;
+		 		END if; 									
+  				
+				/* Si la cantidad de horas rendidas menos las liquidadas 
+  				es distinto a cero                                   */
+  				set Acum_horas =  acum_Horas_rend - acum_Horas_liq;
+  				If acum_Horas != 0 then
+					INSERT INTO liquidacion_mensual (ID_Cliente    ,ID_Proy   ,ID_Rol    ,anio_liquidacion,mes_liquidacion,Cant_Horas,Correlativo) 
+					VALUES                      	 (cliente_aux_ID,ID_proy_CLM,rol_aux_ID,anio_CLM        ,mes_CLM        ,acum_Horas,correlativo_prox);
+				SET acum_Horas_rend = 0;
+  	 			SET acum_Horas_liq = 0;
+  				END if;
+  				
+		 	end loop ciclo_rol;
+ 	 	close Curs_rol;
 END
 $$
-
-
