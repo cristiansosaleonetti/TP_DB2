@@ -7,7 +7,6 @@
 
 ************************
 */
-DROP TABLE if EXISTS auditoria_horas_rendidas;
 
 CREATE TABLE auditoria_horas_rendidas (
 	id_aud_hr INT not null AUTO_INCREMENT PRIMARY KEY,
@@ -25,10 +24,6 @@ CREATE TABLE auditoria_horas_rendidas (
 	)
 	;
 
-
-
-DROP TRIGGER if EXISTS trg_update_auditoria_horas_rendidas;
-
 delimiter $$
 create trigger trg_update_auditoria_horas_rendidas
      after update
@@ -40,8 +35,6 @@ create trigger trg_update_auditoria_horas_rendidas
   end;
 $$
 
-
-DROP TRIGGER if EXISTS trg_insert_auditoria_horas_rendidas;
 
 Delimiter $$
 create trigger trg_insert_auditoria_horas_rendidas

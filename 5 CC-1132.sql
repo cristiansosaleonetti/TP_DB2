@@ -8,13 +8,16 @@
 ******************************
 */
 
+DROP TRIGGER trg_update_auditoria_horas_rendidas;
+DROP procedure CalcularLiquidacionMensual;
+
+
 /* Agrego el campo de Estado */
 ALTER TABLE horas_rendidas
 	add (estado BINary DEFAULT 0);   
 
 
-/* Trigger Eliminación */
-DROP procedure if EXISTS eliminar_horas_rendidas;
+/* Prodedimiento Eliminación */
 
 delimiter $$
 CREATE PROCEDURE eliminar_horas_rendidas (IN ID_Proy_delete int,IN ID_Legajo_delete INT, in Hs_dia_rendido_delete int)
@@ -39,8 +42,9 @@ ALTER TABLE auditoria_horas_rendidas
 		  estado_ant BiNary DEFAULT 0);   
 
 
+
 /* Actulizo trigger de update con opcion de eliminarción */
-DROP TRIGGER if EXISTS trg_update_auditoria_horas_rendidas;
+
 
 delimiter $$
 create trigger trg_update_auditoria_horas_rendidas
@@ -48,10 +52,11 @@ create trigger trg_update_auditoria_horas_rendidas
      on Horas_rendidas
   for each row 
   begin
+  		DECLARE tipo_cam VARCHAR(1);
   	 if new.estado = 1 AND OLD.estado = 0 then
-		SET @tipo_cam = "D";
+		SET tipo_cam = 'D';
 	 else 
-		SET @tipo_cam = "U";
+		SET tipo_cam = 'U';
 	 END if;
     insert into auditoria_horas_rendidas(fecha_mod, user_modid,tipo_de_cambio,id_proy_nue,id_legajo_nue, Hs_dia_rendido_nue,hs_rendidas_nue, id_proy_ant,id_legajo_ant,Hs_dia_rendido_ant,hs_rendidas_ant,estado_nue,estado_ant)
     values (now(),CURRENT_USER(),tipo_cam, NEW.ID_Proy, NEW.ID_Legajo, NEW.Hs_dia_rendido, NEW.Hs_Rendidas, old.ID_Proy, old.ID_Legajo, old.Hs_dia_rendido, old.Hs_Rendidas,new.estado,OLD.estado);  	 
@@ -67,8 +72,6 @@ EL CAMPO ESTADO DE ELIMINACIÓN
 
 ******************************
 */
-
-DROP procedure if EXISTS  CalcularLiquidacionMensual;
 
 delimiter $$
 create procedure CalcularLiquidacionMensual (in ID_Proy_CLM int,in Anio_CLM INT,IN mes_CLM INT)

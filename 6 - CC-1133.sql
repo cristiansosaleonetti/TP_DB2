@@ -9,9 +9,9 @@
 */
 
 /* Auditor */ 
+DROP USER IF EXISTS AUDITOR;
 CREATE user auditor IDENTIFIED BY 'auditor';
 GRANT SELECT ON TP_BD2.* TO auditor;
-
 
 /* Administrador */ 
 CREATE user administrador IDENTIFIED BY 'administrador';
@@ -25,3 +25,4 @@ GRANT INSERT, SELECT ON TP_BD2.* TO sitio_web;
 CREATE user sitio_web_revisor IDENTIFIED BY 'sitio_web_revisor';
 GRANT INSERT, SELECT, UPDATE ON TP_BD2.* TO sitio_web_revisor;
 
+SHOW USER;
